@@ -179,7 +179,6 @@ def extension__tts_generation_webui():
     return {
         "package_name": "extension_styletts2",
         "name": "StyleTTS2",
-        "version": "0.0.1",
         "requirements": "git+https://github.com/rsxdalv/extension_styletts2@main",
         "description": "StyleTTS2 is a text-to-speech model that generates high-quality speech with controllable style",
         "extension_type": "interface",
