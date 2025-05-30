@@ -1,3 +1,4 @@
+import functools
 import gradio as gr
 
 from tts_webui.decorators.gradio_dict_decorator import dictionarize
@@ -51,17 +52,7 @@ def preview_phonemization(text):
     return phoneme_string
 
 
-@decorator_extension_outer
-@decorator_apply_torch_seed
-@decorator_save_metadata
-@decorator_save_wav
-@decorator_add_model_type("style_tts2")
-@decorator_add_base_filename
-@decorator_add_date
-@decorator_log_generation
-@decorator_extension_inner
-@log_function_time
-def generate_audio_styleTTS2(
+def tts(
     text,
     alpha=0.3,
     beta=0.7,
@@ -83,12 +74,28 @@ def generate_audio_styleTTS2(
     return {"audio_out": (SAMPLE_RATE, audio_array)}
 
 
+@functools.wraps(tts)
+@decorator_extension_outer
+@decorator_apply_torch_seed
+@decorator_save_metadata
+@decorator_save_wav
+@decorator_add_model_type("style_tts2")
+@decorator_add_base_filename
+@decorator_add_date
+@decorator_log_generation
+@decorator_extension_inner
+@log_function_time
+def generate_audio_styleTTS2(
+    *args,
+    **kwargs,
+):
+    return tts(*args, **kwargs)
+
+
 def ui():
     gr.Markdown(
         """
-        # StyleTTS2 Demo
-        To use it, simply enter your text, and click "Generate".
-        The model will generate audio from the text.
+        # StyleTTS2
         It uses the [StyleTTS2](https://styletts2.github.io/) model via the [Python Package](https://github.com/sidharthrajaram/StyleTTS2).
         As a result, the phonemizer is a MIT licensed subsitute.
 
@@ -100,33 +107,54 @@ def ui():
         * embedding_scale: Higher scale means style is more conditional to the input text and hence more emotional.
         """
     )
-    text = gr.Textbox(label="Text", lines=3, placeholder="Enter text here...")
+    with gr.Tabs():
+        with gr.Tab("Default Voice"):
+            with gr.Row():
+                main_ui_tab()
+        with gr.Tab("Voice Cloning"):
+            gr.Markdown("Not implemented yet.")
+        with gr.Tab("Multi-Voice"):
+            gr.Markdown("Not implemented yet.")
+        with gr.Tab("LJSpeech"):
+            gr.Markdown("Not implemented yet.")
 
-    preview_phonemized_text_button = gr.Button("Preview phonemized text")
-    phonemized_text = gr.Textbox(
-        label="Phonemized text (what the model will see)", interactive=False
-    )
 
-    preview_phonemized_text_button.click(
-        fn=preview_phonemization,
-        inputs=[text],
-        outputs=[phonemized_text],
-        api_name="style_tts2_phonemize",
-    )
+def main_ui_tab():
+    with gr.Column():
+        text = gr.Textbox(label="Text", lines=3, placeholder="Enter text here...")
 
-    with gr.Row():
-        alpha = gr.Slider(label="Alpha (timbre)", minimum=-0.5, maximum=2.0, value=0.3)
-        beta = gr.Slider(label="Beta (prosody)", minimum=-1.0, maximum=2.0, value=0.7)
+        generate_button = gr.Button("Generate", variant="primary")
+        preview_phonemized_text_button = gr.Button("Preview phonemized text")
+        phonemized_text = gr.Textbox(
+            label="Phonemized text (what the model will see)", interactive=False
+        )
+
+        preview_phonemized_text_button.click(
+            fn=preview_phonemization,
+            inputs=[text],
+            outputs=[phonemized_text],
+            api_name="style_tts2_phonemize",
+        )
+
+        # with gr.Column():
+        alpha = gr.Slider(
+            label="Alpha (timbre)", minimum=-0.5, maximum=2.0, value=0.3
+        )
+        beta = gr.Slider(
+            label="Beta (prosody)", minimum=-1.0, maximum=2.0, value=0.7
+        )
         diffusion_steps = gr.Slider(
-            label="Diffusion Steps (diversity)", minimum=1, maximum=20, value=5, step=1
+            label="Diffusion Steps (diversity)",
+            minimum=1,
+            maximum=20,
+            value=5,
+            step=1,
         )
         embedding_scale = gr.Slider(
             label="Embedding Scale (emotion)", minimum=0.5, maximum=1.5, value=1.0
         )
-        unload_model_button("style_tts2")
-
-    with gr.Row():
         reset_params_button = gr.Button("Reset params")
+        unload_model_button("style_tts2")
         reset_params_button.click(
             fn=lambda: [
                 gr.Slider(value=0.3),
@@ -141,26 +169,26 @@ def ui():
                 embedding_scale,
             ],
         )
-        generate_button = gr.Button("Generate", variant="primary")
 
-    audio_out = gr.Audio(label="Generated audio")
+    with gr.Column():
+        audio_out = gr.Audio(label="Generated audio")
 
-    seed, randomize_seed_callback = randomize_seed_ui()
+        seed, randomize_seed_callback = randomize_seed_ui()
 
-    input_dict = {
-        text: "text",
-        alpha: "alpha",
-        beta: "beta",
-        diffusion_steps: "diffusion_steps",
-        embedding_scale: "embedding_scale",
-        seed: "seed",
-    }
+        input_dict = {
+            text: "text",
+            alpha: "alpha",
+            beta: "beta",
+            diffusion_steps: "diffusion_steps",
+            embedding_scale: "embedding_scale",
+            seed: "seed",
+        }
 
-    output_dict = {
-        "audio_out": audio_out,
-        "metadata": gr.JSON(label="Metadata", visible=False),
-        "folder_root": gr.Textbox(label="Folder root", visible=False),
-    }
+        output_dict = {
+            "audio_out": audio_out,
+            "metadata": gr.JSON(label="Metadata", visible=False),
+            "folder_root": gr.Textbox(label="Folder root", visible=False),
+        }
 
     generate_button.click(
         **randomize_seed_callback,
@@ -197,6 +225,5 @@ if __name__ == "__main__":
         locals()["demo"].close()
     with gr.Blocks() as demo:
         ui()
-    demo.launch(
-        server_port=7771,
-    )
+    demo.launch()
+    # python -m workspace.extension_styletts2.extension_styletts2.main
