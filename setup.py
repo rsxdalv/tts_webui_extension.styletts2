@@ -1,12 +1,12 @@
 import setuptools
 
 setuptools.setup(
-    name="extension_styletts2",
+    name="tts_webui_extension.styletts2",
     packages=setuptools.find_namespace_packages(),
     version="0.1.0",
     author="rsxdalv",
     description="StyleTTS2 is a text-to-speech model that generates high-quality speech with controllable style",
-    url="https://github.com/rsxdalv/extension_styletts2",
+    url="https://github.com/rsxdalv/tts_webui_extension.styletts2",
     project_urls={},
     scripts=[],
     install_requires=[
@@ -18,3 +18,4 @@ setuptools.setup(
         "Operating System :: OS Independent",
     ],
 )
+
